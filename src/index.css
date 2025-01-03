@@ -1,0 +1,16 @@
+body{
+    background-color: black;
+    color: white;
+}
+.form-div{
+    padding: 5px;
+}
+.form-label{
+    margin-left: 10px;
+}
+
+.card{
+    background-color: aliceblue;
+    color: black;
+    padding: 15px;
+}
