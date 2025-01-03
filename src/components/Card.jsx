@@ -4,7 +4,7 @@ export function Card({ titolo, scadenza, callbackDelete }) {
       <span className="titolo">
         {titolo}
         <span className="scadenza">{scadenza}</span>
-        <span onClick={callbackDelete}>Delete</span>
+        <span onClick={callbackDelete} className="delete">Delete</span>
       </span>
     </div>
   );

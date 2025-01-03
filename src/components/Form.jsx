@@ -1,19 +1,37 @@
 // Componente che fa il form
 import { Card } from "./Card";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 const oggettoPartenza = {
   nome: "",
   scadenza: "",
 };
 
-// Il mio array di oggetti di partenza deve essere preso dal database ...
+const urlAPI = "http://localhost:3000/activities";
+
+// Faccio function che fa il fetch di dati
+const fetchData = async () => {
+  const response = await axios.get(urlAPI);
+  return response.data;
+};
 
 export function Form() {
   // Imposto lo state con l'oggetto di partenza
   const [objInput, setObjInput] = useState(oggettoPartenza);
   // Settiamo uno state array vuoto
   const [arrAct, setArrAct] = useState([]);
+
+  // Destrutturo risultato di useQuery richiamando chiamata API
+  const { data, isError, isLoading, error } = useQuery({
+    queryKey: ["mioDB"],
+    queryFn: fetchData,
+    refetchOnWindowFocus: false,
+    onSuccess: (data) => {
+      setArrAct(data); // Popola l'array state con i dati recuperati dal server (DB)
+    },
+  });
 
   // Faccio delle callback per sincronizzare gli input ad evento onChange
   const inputSync = (event) => {
@@ -30,24 +48,32 @@ export function Form() {
   };
 
   // Faccio callback che aggiunge oggetto state ad array state
-  const addObjState = (event) => {
+  const addObjState = async (event) => {
     event.preventDefault();
-    setArrAct((prev_arr) => {
-      // Faccio copia array state precedente e aggiungo oggetto state
-      const newArray = [...prev_arr, objInput];
-      return newArray;
-    });
+    try {
+      const response = await axios.post(urlAPI, objInput);
+      console.log(response.data); // Messaggio di successo dal backend
+
+      // Aggiorna lo stato locale con i dati del backend
+      setArrAct((prev_arr) => [...prev_arr, objInput]);
+      setObjInput(oggettoPartenza); // Resetta i campi del form
+    } catch (error) {
+      console.error("Error adding activity:", error);
+    }
   };
 
   // Faccio callback che cancella obj da arrState
-  const deleteObjState = (indexToDelete) => {
-    // Filter per fare un array nuovo senza l'index passato come parametro
-    setArrAct((prev_array) => {
-      const newArray = prev_array.filter(
-        (_, currIndex) => indexToDelete !== currIndex
+  const deleteObjState = async (indexToDelete) => {
+    const idToDelete = arrAct[indexToDelete].id; // Assumi che ogni oggetto abbia un ID
+    console.log("Deleting ID:", idToDelete); // Debug
+    try {
+      await axios.delete(`${urlAPI}/${idToDelete}`);
+      setArrAct((prev_array) => 
+        prev_array.filter((currObj) => currObj.id !== currIndex) 
       );
-      return newArray;
-    });
+    } catch (error) {
+      console.error("Error deleting activity:", error);
+    }
   };
 
   return (
@@ -84,15 +110,19 @@ export function Form() {
         </div>
         <button type="submit">Add activity</button>
       </form>
-      {/* Map dell'array state */}
-      {arrAct.map((currObj, currIndex) => (
-        <Card
-          key={currIndex}
-          titolo={currObj.nome}
-          scadenza={currObj.scadenza}
-          callbackDelete={() => deleteObjState(currIndex)}
-        />
-      ))}
+      {/* Map dell'array state in base a risposta da database*/}
+      {isLoading && <p>Loading activities...</p>}
+      {isError && <p>Error loading activities: {error.message}</p>}
+      {!isLoading &&
+        !isError &&
+        arrAct.map((currObj, currIndex) => (
+          <Card
+            key={currIndex}
+            titolo={currObj.nome}
+            scadenza={currObj.scadenza}
+            callbackDelete={() => deleteObjState(currIndex)}
+          />
+        ))}
     </div>
   );
 }
